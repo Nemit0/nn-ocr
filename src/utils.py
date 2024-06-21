@@ -1,7 +1,11 @@
 import os
 import time
+import torch
 
-from typing import Callable
+import pandas as pd
+
+from typing import Callable, Iterable
+from torch import tensor
 
 def get_project_root(project_name:str) -> str:
     """Returns project root folder."""
@@ -20,3 +24,20 @@ def print_time(func: Callable) -> Callable:
         print(f"Time taken by {func.__name__}: {end-start}")
         return result
     return wrapper
+
+
+def train_test_split(X:Iterable, Y,split:Iterable, random_state:int=1) -> tuple:
+	torch.random.manual_seed(random_state)
+	l = len(X)
+	limit = int(np.floor(split*l))
+	if isinstance(X, pd.DataFrame):
+		X = tensor(X.values)
+		Y = tensor(Y.values)
+	
+	indices = torch.randperm(l)
+	X, Y = X[indices], Y[indices]
+	x_train = X[0:limit]
+	y_train = Y[0:limit]
+	x_test = X[limit:l]
+	y_test = Y[limit:l]
+	return x_train,y_train,x_test,y_test
