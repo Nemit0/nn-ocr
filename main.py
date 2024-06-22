@@ -39,10 +39,10 @@ def main():
     y_train_one_hot = torch.nn.functional.one_hot(y_train, num_classes=10).float()
 
     # Initialize neural network
-    nn = NeuralNetwork(784, [128, 64], 10)
+    nn = NeuralNetwork(784, [128, 64, 32], 10)
 
     # Train neural network
-    nn.train(x_train, y_train_one_hot, epoch=100, learning_rate=0.001)
+    nn.train(x_train, y_train_one_hot, epoch=10, learning_rate=0.01)
 
     # Predict using the trained model
     predictions = [nn.predict(x) for x in x_test]

@@ -5,6 +5,8 @@ import sys
 from torch import tensor
 from typing import List, Callable
 
+from .optimizers import *
+
 class Layer:
     def __init__(self, input_dim: int, output_dim: int, activation: Callable):
         self.input_dim = input_dim
@@ -68,18 +70,19 @@ def analyse_net(layers: List[Layer], X: List[tensor], Y: List[int]) -> float:
     acc = correct_pred / len(X)
     return acc, loss
 
-def train(x_train: List[tensor], y_train: List[tensor], layers: List[Layer], epoch: int, learning_rate: float) -> List[Layer]:
+def train(x_train: List[tensor], y_train: List[tensor], layers: List[Layer], epoch: int, learning_rate: float, verbose:bool=False) -> List[Layer]:
     for iteration in range(epoch):
         t0 = time.perf_counter()
         for i in range(len(x_train)):
             network = feedforward(x_train[i], layers)
             backprop(network, y_train[i], layers, learning_rate)
         acc, loss = analyse_net(layers, x_train, [torch.argmax(y) for y in y_train])
-        sys.stdout.flush()
-        sys.stdout.flush()
-        progress = int((iteration + 1) / epoch * 40)
-        sys.stdout.write(f"\rEpoch {iteration + 1}, Accuracy {acc:.4f}, Loss {loss:.4f}, Time {time.perf_counter() - t0:.4f}, estimated remaining time: {(time.perf_counter() - t0) * (epoch - iteration - 1):.4f}\n[{'#' * progress}{'*' * (40 - progress)}]")
-    print(f"Training Data Accuracy {analyse_net(layers, x_train, [torch.argmax(y) for y in y_train]):.4f}")
+        if verbose:
+            sys.stdout.flush()
+            progress = int((iteration + 1) / epoch * 40)
+            sys.stdout.write(f"\rEpoch {iteration + 1}, Loss {loss:.4f}, Time {time.perf_counter() - t0:.4f}, estimated remaining time: {(time.perf_counter() - t0) * (epoch - iteration - 1):.4f}\n[{'#' * progress}{'*' * (40 - progress)}]")
+    if verbose:
+        print(f"Training Data Accuracy {analyse_net(layers, x_train, [torch.argmax(y) for y in y_train])}")
     return layers
 
 def test_accuracy(x_test: List[tensor], y_test: List[int], layers: List[Layer]):
