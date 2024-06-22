@@ -50,11 +50,7 @@ def main():
     nn.train(x_train, y_train_one_hot, epoch=10, learning_rate=0.01)
 
     # Predict using the trained model
-    predictions = [torch.argmax(nn.feedforward(x)[-1]).item() for x in x_test]
-    
-    # For evaluation purposes, if you had a test set with labels:
-    # Assuming y_test is the true labels, which you don't have in Kaggle test set, so this part would be for validation set
-    # accuracy = nn.test(x_test, y_test)
+    predictions = [nn.predict(x) for x in x_test]
 
     # Save predictions 
     submission_df = pd.DataFrame({'ImageId': np.arange(1, len(predictions) + 1), 'Label': predictions})

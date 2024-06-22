@@ -83,6 +83,15 @@ class NeuralNetwork:
 
     def test(self, x_test: List[tensor], y_test: List[int]):
         test_accuracy(x_test, y_test, self.layers)
+    
+    def feedforward(self, x: tensor) -> List[tensor]:
+        return feedforward(x, self.layers)
+
+    def predict(self, x: tensor) -> int:
+        return torch.argmax(self.feedforward(x)[-1]).item()
+
+    def __repr__(self):
+        return f"Neural Network:\nInput Dimension: {self.layers[0].input_dim}\nOutput Dimension: {self.layers[-1].output_dim}\nHidden Layers: {[layer.output_dim for layer in self.layers[1:-1]]}"
 
 if __name__ == "__main__":
     if torch.cuda.is_available():
