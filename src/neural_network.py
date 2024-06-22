@@ -1,5 +1,7 @@
 import torch
 import time
+import sys
+
 from torch import tensor
 from typing import List, Callable
 
@@ -48,13 +50,23 @@ def backprop(network: List[tensor], y: tensor, layers: List[Layer], learning_rat
         layer.weights -= learning_rate * torch.outer(deltas[i], network[i])
         layer.biases -= learning_rate * deltas[i]
 
+def mse_loss(pred: tensor, target: tensor) -> tensor:
+    return torch.sum((pred - target)**2) / pred.size(0)
+
+def rmse_loss(pred: tensor, target: tensor) -> tensor:
+    return torch.sqrt(mse_loss(pred, target))
+
 def analyse_net(layers: List[Layer], X: List[tensor], Y: List[int]) -> float:
+    prediction = []
     correct_pred = 0
     for i in range(len(X)):
         y_pred = torch.argmax(feedforward(X[i], layers)[-1])
+        prediction.append(y_pred)
         if y_pred == Y[i]:
             correct_pred += 1
-    return correct_pred / len(X)
+    loss = rmse_loss(torch.tensor(prediction), torch.tensor(Y))
+    acc = correct_pred / len(X)
+    return acc, loss
 
 def train(x_train: List[tensor], y_train: List[tensor], layers: List[Layer], epoch: int, learning_rate: float) -> List[Layer]:
     for iteration in range(epoch):
@@ -62,8 +74,11 @@ def train(x_train: List[tensor], y_train: List[tensor], layers: List[Layer], epo
         for i in range(len(x_train)):
             network = feedforward(x_train[i], layers)
             backprop(network, y_train[i], layers, learning_rate)
-        acc = analyse_net(layers, x_train, [torch.argmax(y) for y in y_train])
-        print(f"Epoch {iteration + 1}, Accuracy {acc:.4f}, Time {time.perf_counter() - t0:.4f}, estimated remaining time: {(time.perf_counter() - t0) * (epoch - iteration - 1):.4f}")
+        acc, loss = analyse_net(layers, x_train, [torch.argmax(y) for y in y_train])
+        sys.stdout.flush()
+        sys.stdout.flush()
+        progress = int((iteration + 1) / epoch * 40)
+        sys.stdout.write(f"\rEpoch {iteration + 1}, Accuracy {acc:.4f}, Loss {loss:.4f}, Time {time.perf_counter() - t0:.4f}, estimated remaining time: {(time.perf_counter() - t0) * (epoch - iteration - 1):.4f}\n[{'#' * progress}{'*' * (40 - progress)}]")
     print(f"Training Data Accuracy {analyse_net(layers, x_train, [torch.argmax(y) for y in y_train]):.4f}")
     return layers
 

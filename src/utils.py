@@ -7,6 +7,7 @@ import numpy as np
 
 from typing import Callable, Iterable
 from torch import tensor
+from rich import print
 
 def get_project_root(project_name:str) -> str:
     """Returns project root folder."""
@@ -26,6 +27,13 @@ def print_time(func: Callable) -> Callable:
         return result
     return wrapper
 
+def set_deivce() -> None:
+    if torch.cuda.is_available():
+        print("[bold green]CUDA is available[/bold green]")
+        torch.set_default_device("cuda:0")
+    else:
+        print("[bold red]CUDA is not available[/bold red]")
+        torch.set_default_device("cpu")
 
 def train_test_split(X:Iterable, Y,split:Iterable, random_state:int=1) -> tuple:
 	torch.random.manual_seed(random_state)

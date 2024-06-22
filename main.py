@@ -6,19 +6,14 @@ from rich import print
 from torch import tensor
 
 from src.neural_network import NeuralNetwork
-from src.utils import get_project_root, print_time
+from src.utils import get_project_root, print_time, set_deivce
 
 @print_time
 def main():
     project_root = get_project_root("nn-ocr")
     data_path = os.path.join(project_root, "data", "digit-recognizer")
 
-    if torch.cuda.is_available():
-        print("[bold green]CUDA is available[/bold green]")
-        torch.set_default_device("cuda:0")
-    else:
-        print("[bold red]CUDA is not available[/bold red]")
-        torch.set_default_device("cpu")
+    set_deivce()
 
     # Load data
     df_train = pd.read_csv(os.path.join(data_path, "train.csv"))
@@ -26,7 +21,7 @@ def main():
 
     print(df_train.shape)
     print(df_test.shape)
-    print(df_train.head())
+    print(df_train.head(2))
 
     # Normalize data (pixels are in range 0-255, we normalize to 0-1)
     x_train = df_train.iloc[:, 1:].values / 255.0
@@ -47,7 +42,7 @@ def main():
     nn = NeuralNetwork(784, [128, 64], 10)
 
     # Train neural network
-    nn.train(x_train, y_train_one_hot, epoch=10, learning_rate=0.01)
+    nn.train(x_train, y_train_one_hot, epoch=100, learning_rate=0.001)
 
     # Predict using the trained model
     predictions = [nn.predict(x) for x in x_test]
