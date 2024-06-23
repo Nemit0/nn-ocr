@@ -2,20 +2,34 @@ import torch
 import time
 import sys
 
+import matplotlib.pyplot as plt
+
 from torch import tensor
 from typing import List, Callable
 
 from .optimizers import *
 
-class Layer:
-    def __init__(self, input_dim: int, output_dim: int, activation: Callable):
-        self.input_dim = input_dim
-        self.output_dim = output_dim
-        self.activation = activation
-        self.weights = torch.randn(output_dim, input_dim) * (2 / input_dim)**0.5  # He Initialization
-        self.biases = torch.zeros(output_dim)
-    
-    def __repr__(self):
+class Layer(object):
+    def __init__(self, input_dim: int, output_dim: int, activation: Callable) -> None:
+        """
+        Assuming input dimension is n, output dimension m, dataset size t
+        Input: t x n
+        Weights: n x m
+        Biases : t x m
+        Feedforward calculation: X * W + B
+        activation: Activation function to be applied to the output of the layer
+        """
+        self.input_dim:int = input_dim
+        self.output_dim:int = output_dim
+        self.activation:Callable = activation
+        self.weights:tensor = torch.randn(input_dim, output_dim) * (2 / output_dim)**0.5
+        self.biases:tensor = torch.zeros(output_dim)
+
+    def feedforward(self, X: tensor) -> tensor:
+        z = torch.matmul(X, self.weights) + tensor([self.biases] * X.size(0))
+        return self.activation(z)
+
+    def __repr__(self) -> str:
         return f"Layer: {self.input_dim} -> {self.output_dim}"
 
 def relu(x: tensor) -> tensor:
@@ -28,13 +42,8 @@ def softmax(x: tensor) -> tensor:
 def cross_entropy_loss(output: tensor, target: tensor) -> tensor:
     return -torch.sum(target * torch.log(output + 1e-9)) / target.size(0)
 
-def feedforward(x: tensor, layers: List[Layer]) -> List[tensor]:
-    network = [x]
-    for layer in layers:
-        z = torch.matmul(layer.weights, network[-1]) + layer.biases
-        activation = layer.activation(z)
-        network.append(activation)
-    return network
+def d_cross_entropy_loss(output: tensor, target: tensor) -> tensor:
+    return -target / (output + 1e-9)
 
 def backprop(network: List[tensor], y: tensor, layers: List[Layer], learning_rate: float):
     # Compute loss gradient
@@ -89,22 +98,32 @@ def test_accuracy(x_test: List[tensor], y_test: List[int], layers: List[Layer]):
     print(f"Test Data Accuracy {analyse_net(layers, x_test, y_test):.4f}")
 
 class NeuralNetwork:
-    def __init__(self, input_dim: int, hidden_layers: List[int], output_dim: int):
+    def __init__(self, input_dim: int, hidden_layers: List[int], output_dim: int, optimizer:object=None, verbose:bool=False):
         # Initialize layers
         self.layers = [Layer(input_dim, hidden_layers[0], relu)]
         for i in range(len(hidden_layers) - 1):
             self.layers.append(Layer(hidden_layers[i], hidden_layers[i + 1], relu))
         self.layers.append(Layer(hidden_layers[-1], output_dim, softmax))
+        self.verb = verbose
+        self.optimizer = optimizer if optimizer else SGD()
+
+    def feedforward(self, x: tensor) -> List[tensor]:
+        for layer in self.layers:
+            x = layer.feedforward(x)
+        return x
+    
+    def predict(self, x: tensor) -> tensor:
+        return torch.argmax(self.feedforward(x))
         
-    def train(self, x_train: List[tensor], y_train: List[tensor], epoch: int, learning_rate: float):
-        self.layers = train(x_train, y_train, self.layers, epoch, learning_rate)
+    def train(self, x_train: tensor, y_train: tensor, epoch: int, learning_rate: float):
+        for iteration in range(epoch):
+            progress = int((iteration + 1) / epoch * 40)
+            if self.verb
+            sys.stdout.write(f"[{'#' * progress}{'*' * (40 - progress)}] Epoch: {iteration + 1}\r")
 
     def test(self, x_test: List[tensor], y_test: List[int]):
         test_accuracy(x_test, y_test, self.layers)
     
-    def feedforward(self, x: tensor) -> List[tensor]:
-        return feedforward(x, self.layers)
-
     def predict(self, x: tensor) -> int:
         return torch.argmax(self.feedforward(x)[-1]).item()
 

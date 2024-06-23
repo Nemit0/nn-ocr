@@ -1,6 +1,9 @@
 from abc import ABC, abstractmethod
 
-class optimizers:
+def gradiant_descent(weights, biases, gradients, learning_rate):
+    
+
+class optimizers(object):
     def __init__(self):
         pass
 
