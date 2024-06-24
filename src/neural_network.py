@@ -33,7 +33,6 @@ class Layer(object):
         input_gradient = torch.matmul(output_gradient, self.weights.T)
         weights_gradient = torch.matmul(self.input.T, output_gradient)
         biases_gradient = output_gradient.sum(0)
-
         return input_gradient, weights_gradient, biases_gradient
 
     def update_params(self, delta_weights: tensor, delta_biases: tensor, learning_rate: float):
@@ -50,17 +49,26 @@ def softmax(x: tensor) -> tensor:
     _exp = torch.exp(x - torch.max(x))
     return _exp / torch.sum(_exp)
 
-def cross_entropy_loss(output: tensor, target: tensor) -> tensor:
-    return -torch.sum(target * torch.log(output + 1e-9)) / target.size(0)
+def cross_entropy_loss(output: tensor, target: tensor, d:int=0) -> tensor:
+    match d:
+        case 0:
+            return -torch.sum(target * torch.log(output + 1e-9)) / target.size(0)
+        case 1:
+            return -target / (output + 1e-9)
 
-def d_cross_entropy_loss(output: tensor, target: tensor) -> tensor:
-    return -target / (output + 1e-9)
+def mse_loss(pred: tensor, target: tensor, d:int=0) -> tensor:
+    match d:
+        case 0:
+            return torch.sum((pred - target) ** 2) / pred.size(0)
+        case 1:
+            return 2 * (pred - target) / pred.size(0)
 
-def mse_loss(pred: tensor, target: tensor) -> tensor:
-    return torch.sum((pred - target)**2) / pred.size(0)
-
-def rmse_loss(pred: tensor, target: tensor) -> tensor:
-    return torch.sqrt(mse_loss(pred, target))
+def rmse_loss(pred: tensor, target: tensor, d:int=0) -> tensor:
+    match d:
+        case 0:
+            return torch.sqrt(mse_loss(pred, target))
+        case 1:
+            return mse_loss(pred, target, d=1) / (2 * rmse_loss(pred, target))
 
 class NeuralNetwork:
     def __init__(self, input_dim: int, hidden_layers: List[int], output_dim: int, optimizer:object=None, verbose:bool=False):
@@ -80,27 +88,40 @@ class NeuralNetwork:
     def predict(self, x: tensor) -> tensor:
         return torch.argmax(self.feedforward(x))
     
-    def backpropagate(self, y: tensor, output_activations: List[tensor], learning_rate: float):
+    def backpropagate(self,x_train: tensor, y: tensor, output_activations: List[tensor], learning_rate: float, loss_fn: Callable=mse_loss):
         # Start with the gradient from loss function
-        output_gradient = 2 * (output_activations[-1] - y) / y.size(0)  # MSE derivative
+        output_gradient = loss_fn(output_activations[-1], y, d=1)
 
         for i in reversed(range(len(self.layers))):
             layer = self.layers[i]
-            current_activation = output_activations[i]
+            if self.verb:
+                print(f"Layer: {i}")
             if i > 0:
-                prev_activation = output_activations[i-1]
+                prev_output = output_activations[i - 1]
             else:
-                prev_activation = None  # For input layer
-            
-            output_gradient, delta_weights, delta_biases = layer.backward(output_gradient)
-            layer.update_params(delta_weights, delta_biases, learning_rate)
+                prev_output = x_train
+            if self.verb:
+                print(f"Output Gradient: {output_gradient}")
+            # Calculate the gradient of the output with respect to the input
+            input_gradient, weights_gradient, biases_gradient = layer.backward(output_gradient)
+            if self.verb:
+                print(f"Input Gradient: {input_gradient}")
+                print(f"Weights Gradient: {weights_gradient}")
+                print(f"Biases Gradient: {biases_gradient}")
+            # Update the weights and biases
+            layer.update_params(weights_gradient, biases_gradient, learning_rate)
+            if self.verb:
+                print(f"Updated Weights: {layer.weights}")
+                print(f"Updated Biases: {layer.biases}")
+            # Update the output gradient for the next layer
+            output_gradient = input_gradient
         
-    def train(self, x_train: tensor, y_train: tensor, epochs: int, learning_rate: float):
+    def train(self, x_train: tensor, y_train: tensor, epochs: int, learning_rate: float, loss_fn: Callable=mse_loss):
         for epoch in range(epochs):
             output_activations = self.feedforward(x_train)
             self.backpropagate(y_train, output_activations, learning_rate)
             if epoch % 100 == 0:
-                loss = mse_loss(output_activations[-1], y_train)
+                loss = loss_fn(output_activations[-1], y_train)
                 print(f"Epoch {epoch}, Loss: {loss.item()}")
 
     def test(self, x_test:tensor, y_test:tensor):

@@ -8,6 +8,9 @@ class optimizers(object):
     def update(self, weights, gradients):
         pass
 
+class Naive(optimizers):
+    def __init__
+
 class SGD(optimizers):
     def __init__(self, learning_rate: float):
         self.learning_rate = learning_rate
