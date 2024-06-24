@@ -1,13 +1,10 @@
 from abc import ABC, abstractmethod
 
 def gradiant_descent(weights, biases, gradients, learning_rate):
-    
+    raise NotImplementedError
 
 class optimizers(object):
-    def __init__(self):
-        pass
-
-    @abstractmethod
+    @abstractmethod 
     def update(self, weights, gradients):
         pass
 
